@@ -1,0 +1,69 @@
+$rodcAlias = "\\rodc.site.internal"
+$Script:RodcSchoolFolderRoot = "$rodcAlias\fsSchools\Administration Shared"
+
+
+#region Functions 
+
+
+
+ function Script:Get-UserSitecode{
+        begin{        
+                $script:CurrentSite = Get-ChildItem $Script:RodcSchoolFolderRoot
+             }
+        process{
+                Write-Output $script:CurrentSite.Name
+                }       
+    }
+
+function Script:Set-UserSitecode{
+        [CmdletBinding()]
+        Param
+            (
+            [Parameter(Mandatory=$true,
+            ValueFromPipeline=$true)]
+            [string]
+            $Name
+            )
+
+        begin{
+                if($script:CurrentSite.Count -gt 1)
+                    {
+                        Write-Host "Multiple site codes found" -ForegroundColor Yellow
+                        Write-Host "Please select a site code" -ForegroundColor Yellow
+        
+                        for($i = 0; $i -lt $script:CurrentSite.count; $i++)
+                            {
+                            Write-Host "$($i): | $($script:CurrentSite[$i].Name)"
+                            }
+                        $selection = Read-Host -Prompt "Select your school name"
+                        [String]$script:SelectedSite = $script:CurrentSite[$selection]
+                    }
+                else
+                    {
+                        Write-Host "only one site found, setting to " $CurrentSite.Name
+                        [String]$script:SelectedSite = $script:CurrentSite.Name
+                    }      
+            }
+    
+        end{
+            $script:SelectedSchoolSiteName = ($script:SelectedSite.Split('-') | Select-Object -Last 1)
+            $script:SelectedSchoolSitePrefix = ($script:SelectedSite.Split('-') | Select-Object -First 1)
+            $script:SelectedSchoolSiteCode = ($script:SelectedSchoolSitePrefix.Substring(1, 4))
+            $script:SelectedSiteRodcRoot = Join-Path -Path $Script:RodcSchoolFolderRoot -ChildPath $SelectedSite
+            $script:SelectedSiteSharedFolderStruct = (Get-ChildItem $SelectedSiteRodcRoot -Depth 1 -Directory).FullName
+            $Script:SelectedSiteSchoolLdapRoot = [ADSI]"LDAP://OU=School Managed,OU=Groups,OU=$SelectedSitePrefix,OU=Schools,DC=+$env:USERDOMAIN+,DC=schools,DC=internal"
+            $Script:SelectedSiteAdGroups = $SelectedSiteSchoolLdapRoot.Children.Name
+            #$Script:SelectedSiteSchoolLdapPCs = [ADSI]'OU=School Managed,OU=Computers,OU=$SelectedSitePrefix,OU=Schools,DC=blue,DC=schools,DC=internal'
+            $Script:SelectedSiteAdGroup = $SelectedSiteSchoolLdapRoot.Children | Where-Object {$_.Path -notmatch 'Students'}
+            
+            }
+    }
+    
+  
+        
+        
+    function Get-CurrentSOE4SiteDnsIP {
+      $Script:LocalMachineNetworkInterface = (get-wmiobject win32_networkadapter -filter "netconnectionstatus = 2")
+      $Script:DNSLocalMachine = Get-DnsClientServerAddress -InterfaceAlias $LocalMachineNetworkInterface.netconnectionid -AddressFamily IPv4
+      $Script:SiteDnsIP = $DNSLocalMachine.ServerAddresses.GetValue(0)
+      }
