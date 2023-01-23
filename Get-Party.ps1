@@ -4,12 +4,12 @@
 function Get-Party {
     [CmdletBinding()]
     [OutputType([psobject])]
+
     param (
-        [Parameter(Mandatory = $true,
-                   ValueFromPipelineByPropertyName = $true,
-                   Position = 0)]
-        [String]
-        $SubjectArea
+        [Parameter(Mandatory = $true)]
+        [ValidatePattern("[0-9][0-9][0-9][0-9]")]
+            [String[]]
+            $SchoolCode
     )
     process {
         $QueryType = @{
